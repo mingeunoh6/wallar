@@ -21,8 +21,10 @@
     initializeMaterials,
   } from "$lib/components/holographicModule.js";
 
+  import  { wallPortalComponent } from "$lib/components/wall-portal.js";
   
 
+  let wallType = $state('portal')
 
   let xrReady = $state(false)
 
@@ -79,6 +81,7 @@ async function initAframe8thWall() {
           console.error("AFRAME is not loaded yet. Retrying...");
           setTimeout(initializeAFRAME, 100); // Check every 100ms
         } else {
+            AFRAME.registerComponent("wall-portal", wallPortalComponent);
             AFRAME.registerComponent("place-on-wall", placeOnWallComponent);
           AFRAME.registerComponent("wall-from-floor", wallFromFloorComponent);
           AFRAME.registerComponent("set-wall-top", setWallTopComponent);
@@ -145,7 +148,15 @@ async function initAframe8thWall() {
     name="keywords"
     content="3D 웹 제작, 증강현실 개발, 증강현실, WebAR, WebXR, XR제작, 증강현실 제작, AR 제작, Argumented Reality, 메타, 퀘스트 프로, 퀘스트3, 비전프로"
   />
-  <!-- Google tag (gtag.js) -->
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.min.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
   
 </svelte:head>
 
@@ -157,7 +168,13 @@ async function initAframe8thWall() {
 
   <a-scene
     physics="driver: ammo; debug: false; restitution: 1.5; friction: 0.1; gravity:-100"
-    renderer="colorManagement:true"
+    renderer="
+    colorManagement:true;
+    alpha: true;
+    antialias: true;
+    stencil: true;
+
+    "
     shadow="type: pcfsoft"
     landing-page
     xrextras-loading
@@ -174,6 +191,32 @@ async function initAframe8thWall() {
     <a-camera id="camera" position="0 8 8" raycaster="objects: .cantap"
     ></a-camera>
 
+    <a-assets>
+        <img id="img-arrow" src="/arrow.png" />
+        <a-asset-item id="soup_model" src="/Soup.glb"></a-asset-item>
+        <audio id="collisionSound" src="/canHit1.mp3"></audio>
+        <audio id="collisionSound2" src="/canHit2.mp3"></audio>
+      </a-assets>
+
+      <!-- <a-image id="up-arrow" src="#img-arrow" scale="4 4 4"></a-image> -->
+
+    <a-entity wall-portal>
+
+ 
+
+
+    </a-entity>
+
+
+        <a-box id="topHider" xrextras-hider-material></a-box>
+        <a-box id="bottomHider" xrextras-hider-material></a-box>
+        <a-box id="leftHider" xrextras-hider-material></a-box>
+        <a-box id="rightHider" xrextras-hider-material></a-box>
+
+    
+
+
+    {#if wallType === 'dropObject'}
     <!-- 바닥 엣지 가이드 -->
     <a-box
       id="bottomGuide"
@@ -184,15 +227,6 @@ async function initAframe8thWall() {
       height="0.05"
     >
     </a-box>
-
-    <a-assets>
-      <img id="img-arrow" src="/arrow.png" />
-      <a-asset-item id="soup_model" src="/Soup.glb"></a-asset-item>
-      <audio id="collisionSound" src="/canHit1.mp3"></audio>
-      <audio id="collisionSound2" src="/canHit2.mp3"></audio>
-    </a-assets>
-
-    <a-image id="up-arrow" src="#img-arrow" scale="4 4 4"></a-image>
 
 
       <!-- 바닥 엣지 가이드 텍스트 -->
@@ -247,6 +281,16 @@ async function initAframe8thWall() {
     >
     </a-box>
 
+           <!-- 충돌 사운드 -->
+           <a-entity
+           id="audioPlayer"
+           sound="src: #collisionSound; loop:false; poolSize:20;"
+           ></a-entity>
+           <a-entity
+           id="audioPlayer2"
+           sound="src: #collisionSound2; loop:false; poolSize:20;"
+           ></a-entity>
+{/if}
     <a-light type="ambient" intensity="1"></a-light>
 
     <!-- 바닥 모델 -->
@@ -264,15 +308,7 @@ async function initAframe8thWall() {
     >
     </a-entity>
 
-        <!-- 충돌 사운드 -->
-        <a-entity
-        id="audioPlayer"
-        sound="src: #collisionSound; loop:false; poolSize:20;"
-        ></a-entity>
-        <a-entity
-        id="audioPlayer2"
-        sound="src: #collisionSound2; loop:false; poolSize:20;"
-        ></a-entity>
+ 
   </a-scene>
 {/if}
 
