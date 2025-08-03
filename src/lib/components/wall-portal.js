@@ -1,5 +1,9 @@
+
+import gsap from 'gsap';
+
 // MarchingCubes는 동적으로 로드
 let MarchingCubes;
+
 
 const wallPortalComponent = {
     schema: {
@@ -10,7 +14,7 @@ const wallPortalComponent = {
         this.placed = false;
         this.wallStep = 0;
         this.spawnCount = 150; // 줄여서 성능 향상
-        this.portalSize = 1;
+        this.portalSize = 0.5;
         
         // Sphere tracking arrays
         this.sphereEntities = []; // A-Frame entities
@@ -30,6 +34,11 @@ const wallPortalComponent = {
       this.bottomHider = document.getElementById("bottomHider");
       this.leftHider = document.getElementById("leftHider");
       this.rightHider = document.getElementById("rightHider");
+
+      this.topHider.setAttribute('visible',false)
+      this.bottomHider.setAttribute('visible',false)
+      this.leftHider.setAttribute('visible',false)
+      this.rightHider.setAttribute('visible',false)
  
       this.prompt = document.getElementById("prompt-text");
       console.log(this.prompt)
@@ -39,10 +48,11 @@ const wallPortalComponent = {
       console.log(this.scene)
 
       //portalHelper
-      const portalHelperObj = new THREE.PlaneGeometry(this.portalSize, this.portalSize);
-      const portalHelperMaterial = new THREE.MeshBasicMaterial({color: 0xff0000, side: THREE.DoubleSide});
+      const portalHelperObj = new THREE.CircleGeometry(this.portalSize, 32);
+      const portalHelperMaterial = new THREE.MeshBasicMaterial({color: 0x000000, side: THREE.DoubleSide});
       this.portalHelper = new THREE.Mesh(portalHelperObj, portalHelperMaterial);
       this.scene.add(this.portalHelper);
+      this.portalHelper.visible = false;
       
       
 
@@ -84,6 +94,8 @@ const wallPortalComponent = {
             this.placed = true;
             this.wallStep = 1;
 
+            this.portalHelper.visible = true;
+
             // prompt, 하단 엣지 가이드 완성 된 이후 포탈 위치 설정 프롬프트 보이기
             this.prompt.innerHTML = `
       벽면에서 포탈을 설치할<br/>위치를 선택하고<br/>화면을 탭하세요.
@@ -100,12 +112,12 @@ const wallPortalComponent = {
               transparent: true,
               opacity: 0.4,
             });
-            wall.object3D.scale.set(50, 2000, 0.25);
+            wall.object3D.scale.set(50, 2000, 0.5);
             wall.object3D.rotation.y = this.startHelperLine.rotation.y;
             wall.setAttribute("position", {
               x: startLinePos.x,
               y: startLinePos.y + 1000,
-              z: startLinePos.z + 0.25/2,
+              z: startLinePos.z - 0.25,
             });
             wall.setAttribute("scanner-shader", {
               width: 0.2,
@@ -122,7 +134,7 @@ const wallPortalComponent = {
       
             //portal 배치 가이드 오브젝트 추가
           
-            this.portalHelper.position.set(startLinePos.x, startLinePos.y + this.portalSize/2, startLinePos.z );
+            this.portalHelper.position.set(startLinePos.x, startLinePos.y + this.portalSize/2, startLinePos.z+0.26 );
             this.portalHelper.rotation.y = this.startHelperLine.rotation.y;
     
 
@@ -137,6 +149,11 @@ const wallPortalComponent = {
     settingPortal(){
         console.log('settingportal')
         this.wallStep = 2;
+        this.topHider.setAttribute('visible',true)
+        this.bottomHider.setAttribute('visible',true)
+        this.leftHider.setAttribute('visible',true)
+        this.rightHider.setAttribute('visible',true)
+
         let portalPos = this.portalHelper.position.clone();
         let portalRot = this.portalHelper.rotation.clone();
         this.portalHelper.visible = false;
@@ -149,6 +166,133 @@ const wallPortalComponent = {
         
         
         `;
+
+
+
+        //portal 등장 효과 - Ripple Shader
+        const portalGraphicGeometry = new THREE.PlaneGeometry(this.portalSize*5,this.portalSize*5,100,100)
+        
+        // Ripple shader material
+        const rippleVertexShader = `
+            uniform float time;
+            varying vec2 vUv;
+            varying float vWaveHeight;
+            
+            void main() {
+                vUv = uv;
+                
+                // 중심점에서의 거리 계산
+                vec2 center = vec2(0.5, 0.5);
+                float dist = distance(uv, center);
+                
+                // 물결 파라미터
+                float rippleSpeed = 0.5;
+                float rippleFrequency = 30.0;
+                float waveAmplitude = 0.05; // 물결 높이
+                
+                // 원형 물결 생성
+                float wave = sin((dist - time * rippleSpeed) * rippleFrequency);
+                
+                // 거리에 따른 감쇠 (중심에서 멀어질수록 약해짐)
+                float decay = 1.0 - smoothstep(0.0, 0.5, dist);
+                
+                // Z축 변위 계산
+                float displacement = wave * waveAmplitude * decay;
+                
+                // 변위된 position 계산
+                vec3 newPosition = position;
+                newPosition.z += displacement;
+                
+                // fragment shader로 파도 높이 전달
+                vWaveHeight = displacement;
+                
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+            }
+        `;
+        
+        const rippleFragmentShader = `
+            uniform float time;
+            uniform vec2 resolution;
+            uniform float fadeOpacity;
+            varying vec2 vUv;
+            varying float vWaveHeight;
+            
+            void main() {
+                // 중심점에서의 거리 계산 (0~1 범위)
+                vec2 center = vec2(0.5, 0.5);
+                float dist = distance(vUv, center);
+                
+                // 시간에 따라 확장되는 ripple
+                float rippleSpeed = 0.5;
+                float rippleFrequency = 30.0; // 스트라이프 빈도
+                float rippleWidth = 0.005; // 각 링의 두께
+                
+                // 원형 파동 패턴 생성
+                float wave = sin((dist - time * rippleSpeed) * rippleFrequency);
+                
+                // 스트라이프 패턴을 더 선명하게
+                wave = smoothstep(-0.2, 0.2, wave);
+                
+                // 중심부는 더 밝게
+                float centerGlow = 1.0 - smoothstep(0.0, 0.1, dist);
+                
+                // 원형 마스킹 - 더 넓은 feather 범위
+                float circleMask = 1.0 - smoothstep(0.3, 0.5, dist);
+                
+                // 가장자리 페더링 - 더 부드럽고 넓은 페이드아웃
+                float softEdge = 1.0 - smoothstep(0.1, 0.5, dist);
+                
+                // 시간에 따른 전체적인 페이드 인
+                float timeFade = smoothstep(0.0, 1.0, time * 0.5);
+                
+                // 파도 높이에 따른 추가 밝기
+                float waveHighlight = abs(vWaveHeight) * 20.0; // 파도가 높을수록 밝게
+                
+                // 최종 밝기 계산
+                float brightness = wave * softEdge * timeFade + centerGlow * 0.5 + waveHighlight;
+                
+                // 흑백 색상 (파도 효과로 약간의 블루 톤 추가)
+                vec3 color = vec3(brightness) + vec3(0.0, 0.1, 0.2) * waveHighlight;
+                
+                // 알파값 계산 - 원형 마스크와 소프트 엣지 적용
+                float alpha = circleMask * timeFade * fadeOpacity;
+                
+                // 원 바깥쪽은 완전히 투명하게
+                if (dist > 0.5) {
+                    alpha = 0.0;
+                }
+                
+                gl_FragColor = vec4(color, alpha );
+            }
+        `;
+        
+        const portalGraphicMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                time: { value: 0.0 },
+                resolution: { value: new THREE.Vector2(100, 100) },
+                fadeOpacity: { value: 1.0 }
+            },
+            vertexShader: rippleVertexShader,
+            fragmentShader: rippleFragmentShader,
+            transparent: true,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+        
+        const portalGraphic = new THREE.Mesh(portalGraphicGeometry, portalGraphicMaterial)
+        portalGraphic.position.set(portalPos.x,portalPos.y,portalPos.z+0.05)
+        this.scene.add(portalGraphic)
+        portalGraphic.rotation.y = portalRot.y
+        
+        // 애니메이션을 위한 참조 저장
+        this.portalGraphic = portalGraphic;
+        this.portalStartTime = this.time;
+
+
+
+
+
 
         let portalBoxMat = {
             color: "black",
@@ -180,6 +324,9 @@ const wallPortalComponent = {
         portalBoxTop.setAttribute("material", portalBoxMat);
         portalBoxTop.setAttribute('reflections',{type: 'realtime'})
         this.sceneEl.appendChild(portalBoxTop);
+        
+        // portalBox들 참조 저장
+        this.portalBoxes = [portalBoxTop];
 
         const portalBoxBottom = portalBoxTop.cloneNode(true);
         portalBoxBottom.setAttribute('position',{
@@ -195,6 +342,7 @@ const wallPortalComponent = {
         portalBoxBottom.setAttribute('material', portalBoxMat);
         portalBoxBottom.setAttribute('reflections',{type: 'realtime'})
         this.sceneEl.appendChild(portalBoxBottom);
+        this.portalBoxes.push(portalBoxBottom);
 
         const portalBoxLeft = portalBoxTop.cloneNode(true);
         portalBoxLeft.setAttribute('position',{
@@ -210,6 +358,7 @@ const wallPortalComponent = {
         portalBoxLeft.setAttribute('material', portalBoxMat);
         portalBoxLeft.setAttribute('reflections',{type: 'realtime'})
         this.sceneEl.appendChild(portalBoxLeft);
+        this.portalBoxes.push(portalBoxLeft);
 
         const portalBoxRight = portalBoxTop.cloneNode(true);
         portalBoxRight.setAttribute('position',{
@@ -225,6 +374,7 @@ const wallPortalComponent = {
         portalBoxRight.setAttribute('material', portalBoxMat);
         portalBoxRight.setAttribute('reflections',{type: 'realtime'})
         this.sceneEl.appendChild(portalBoxRight);
+        this.portalBoxes.push(portalBoxRight);
         
         const portalBoxBack = portalBoxTop.cloneNode(true);
         portalBoxBack.setAttribute('position',{
@@ -240,6 +390,7 @@ const wallPortalComponent = {
         portalBoxBack.setAttribute('material', portalBoxMat);
         portalBoxBack.setAttribute('reflections',{type: 'realtime'})
         this.sceneEl.appendChild(portalBoxBack);
+        this.portalBoxes.push(portalBoxBack);
 
         //Physics setting
         portalBoxTop.setAttribute("ammo-body", {
@@ -373,7 +524,7 @@ const wallPortalComponent = {
     spawnSpheres(pos){
         // spawnCount 만큼 sphere 생성
         for(let i = 0; i < this.spawnCount; i++) {
-            setTimeout(() => {
+            setTimeout((index) => {
                 // 랜덤한 색상
                 const colors = ['#ffff00', '#ff0000', '#0000ff', '#00ff00', '#ff8800', '#8800ff'];
                 const randomColor = colors[Math.floor(Math.random() * colors.length)];
@@ -424,7 +575,57 @@ const wallPortalComponent = {
                     sphere.body.setLinearVelocity(force);
                     Ammo.destroy(force);
                 });
-            }, i * 100); // 100ms 간격으로 생성
+                
+                // 마지막 sphere가 생성되면 GSAP로 fade out
+                if (index === this.spawnCount - 1) {
+                    console.log('last sphere!!!!!!!')
+                    setTimeout(() => {
+                        if (this.portalGraphic && this.portalGraphic.material.uniforms) {
+                            // GSAP을 사용해 portalGraphic uniform fadeOpacity 애니메이션
+                            gsap.to(this.portalGraphic.material.uniforms.fadeOpacity, {
+                                value: 0,
+                                duration: 3.0,
+                                ease: "power2.out",
+                                onComplete: () => {
+                                    if (this.portalGraphic && this.portalGraphic.parent) {
+                                        this.scene.remove(this.portalGraphic);
+                                        this.portalGraphic = null;
+                                    }
+                                }
+                            });
+                            
+                            // portalBox들도 함께 fadeout
+                            if (this.portalBoxes) {
+                                this.portalBoxes.forEach((box, index) => {
+                                    if (box && box.object3D) {
+                                        console.log(`Fading portalBox ${index}`, box.object3D);
+                                        
+                                        // object3D mesh에서 material 접근
+                                        box.object3D.traverse((child) => {
+                                            if (child.isMesh && child.material) {
+                                                console.log(`Found mesh material for box ${index}`, child.material);
+                                                
+                                                // material을 transparent로 설정
+                                                child.material.transparent = true;
+                                                
+                                                // GSAP으로 opacity 애니메이션
+                                                gsap.to(child.material, {
+                                                    opacity: 0,
+                                                    duration: 1.0,
+                                                    ease: "power2.out",
+                                                    onUpdate: () => {
+                                                        child.material.needsUpdate = true;
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        }
+                    }, 1000); // 1초 딜레이 후 페이드 시작
+                }
+            }, i * 100, i); // 100ms 간격으로 생성, i를 파라미터로 전달
         }
     },
 
@@ -525,9 +726,12 @@ const marchingCubeEffectPos = new THREE.Vector3(
    this.portalHelper.position.z-this.portalSize/2
 )
 
+let initialScaleValue = 1
+let portalGraphicScaleValue = initialScaleValue + 0.5 * Math.log(minHeight*0.1 + 1); 
 
 
-
+//marchingCube Scale 에 맞게 portalGraphic scale 조정
+this.portalGraphic.scale.set(portalGraphicScaleValue,portalGraphicScaleValue,portalGraphicScaleValue)
 
 
 
@@ -669,6 +873,7 @@ const marchingCubeEffectPos = new THREE.Vector3(
         let portalPos = this.calculateRayContactPoint(this.wall.object3D, new THREE.Vector2(0, 0));
 
         this.portalHelper.position.lerp(portalPos, 0.4);
+        this.portalHelper.position.z = portalPos.z+0.26
         this.portalHelper.rotation.y = this.wall.object3D.rotation.y;
 
     } else if(this.wallStep === 2){
@@ -697,6 +902,12 @@ const marchingCubeEffectPos = new THREE.Vector3(
         
         // Update time for any animations
         this.time += 0.016; // ~60fps
+        
+        // Portal ripple animation update (시간 업데이트만)
+        if (this.portalGraphic && this.portalGraphic.material.uniforms) {
+            const elapsedTime = this.time - this.portalStartTime;
+            this.portalGraphic.material.uniforms.time.value = elapsedTime;
+        }
     }
 }
   };

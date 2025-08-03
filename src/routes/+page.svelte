@@ -330,7 +330,7 @@ async function initAframe8thWall() {
     text-align: center;
     color: white;
     text-shadow: 0px 1px 1px black;
-    font-size: 1.8em;
+    font-size: 1.2em;
     pointer-events: none;
   }
 
