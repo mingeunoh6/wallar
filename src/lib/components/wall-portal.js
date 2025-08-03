@@ -9,8 +9,8 @@ const wallPortalComponent = {
     
         this.placed = false;
         this.wallStep = 0;
-        this.spawnCount = 30; // 줄여서 성능 향상
-        this.portalSize = 2;
+        this.spawnCount = 150; // 줄여서 성능 향상
+        this.portalSize = 1;
         
         // Sphere tracking arrays
         this.sphereEntities = []; // A-Frame entities
@@ -138,6 +138,7 @@ const wallPortalComponent = {
         console.log('settingportal')
         this.wallStep = 2;
         let portalPos = this.portalHelper.position.clone();
+        let portalRot = this.portalHelper.rotation.clone();
         this.portalHelper.visible = false;
 
         //가상 벽 없앰
@@ -146,7 +147,17 @@ const wallPortalComponent = {
 
         this.prompt.innerHTML = `
         
+        
         `;
+
+        let portalBoxMat = {
+            color: "black",
+          
+            side: THREE.DoubleSide,
+            metalness: 0.9,
+            roughness: 0.1,
+     
+        }
 
 
         //portal 공간 생성 
@@ -161,12 +172,13 @@ const wallPortalComponent = {
             z: portalPos.z-this.portalSize/2
         });
     portalBoxTop.setAttribute('rotation',{
-        x: -90,
-        y: 0,
-        z: 0
+        x: portalRot.x -90,
+        y: portalRot.y,
+        z: portalRot.z
     })
    
-        portalBoxTop.setAttribute("material", {color: "blue"});
+        portalBoxTop.setAttribute("material", portalBoxMat);
+        portalBoxTop.setAttribute('reflections',{type: 'realtime'})
         this.sceneEl.appendChild(portalBoxTop);
 
         const portalBoxBottom = portalBoxTop.cloneNode(true);
@@ -176,11 +188,12 @@ const wallPortalComponent = {
             z: portalPos.z-this.portalSize/2
         })
         portalBoxBottom.setAttribute('rotation',{
-            x: 90,
-            y: 0,
-            z:0
+            x: portalRot.x + 110,
+            y: portalRot.y,
+            z: portalRot.z
         })
-        portalBoxBottom.setAttribute('material', {color: "blue"});
+        portalBoxBottom.setAttribute('material', portalBoxMat);
+        portalBoxBottom.setAttribute('reflections',{type: 'realtime'})
         this.sceneEl.appendChild(portalBoxBottom);
 
         const portalBoxLeft = portalBoxTop.cloneNode(true);
@@ -190,11 +203,12 @@ const wallPortalComponent = {
             z: portalPos.z-this.portalSize/2
         })
         portalBoxLeft.setAttribute('rotation',{
-            x: 0,
-            y: 90,
-            z:0
+            x: portalRot.x,
+            y: portalRot.y + 90,
+            z: portalRot.z
         })
-        portalBoxLeft.setAttribute('material', {color: "blue"});
+        portalBoxLeft.setAttribute('material', portalBoxMat);
+        portalBoxLeft.setAttribute('reflections',{type: 'realtime'})
         this.sceneEl.appendChild(portalBoxLeft);
 
         const portalBoxRight = portalBoxTop.cloneNode(true);
@@ -204,11 +218,12 @@ const wallPortalComponent = {
             z: portalPos.z-this.portalSize/2
         })
         portalBoxRight.setAttribute('rotation',{
-            x: 0,
-            y: -90,
-            z:0
+            x: portalRot.x,
+            y: portalRot.y - 90,
+            z: portalRot.z
         })
-        portalBoxRight.setAttribute('material', {color: "blue"});
+        portalBoxRight.setAttribute('material', portalBoxMat);
+        portalBoxRight.setAttribute('reflections',{type: 'realtime'})
         this.sceneEl.appendChild(portalBoxRight);
         
         const portalBoxBack = portalBoxTop.cloneNode(true);
@@ -218,11 +233,12 @@ const wallPortalComponent = {
             z: portalPos.z-this.portalSize
         })
         portalBoxBack.setAttribute('rotation',{
-            x: 0,
-            y: 0,
-            z: 0
+            x: portalRot.x,
+            y: portalRot.y,
+            z: portalRot.z
         })
-        portalBoxBack.setAttribute('material', {color: "red"});
+        portalBoxBack.setAttribute('material', portalBoxMat);
+        portalBoxBack.setAttribute('reflections',{type: 'realtime'})
         this.sceneEl.appendChild(portalBoxBack);
 
         //Physics setting
@@ -278,171 +294,67 @@ const wallPortalComponent = {
         portalBoxBack.setAttribute("ammo-restitution", "1.5");
 
 
+        let hiderSize = 100
+        let hiderDepth = 10
+        this.topHider.setAttribute('width', hiderSize);
+        this.topHider.setAttribute('height', hiderSize);
+        this.topHider.setAttribute('depth', hiderDepth);
+        this.topHider.setAttribute("position", {
+            x: portalPos.x,
+            y: portalPos.y + this.portalSize/2 + hiderSize/2,
+            z: portalPos.z - hiderDepth/2
+        })
+        this.topHider.setAttribute('rotation',{
+            x: portalRot.x,
+            y: portalRot.y,
+            z: portalRot.z
+        })
+       
+        this.bottomHider.setAttribute('width', hiderSize)
+        this.bottomHider.setAttribute('height', hiderSize)
+        this.bottomHider.setAttribute('depth', hiderDepth)
+        this.bottomHider.setAttribute("position", {
+            x: portalPos.x,
+            y: portalPos.y - this.portalSize/2 - hiderSize/2,
+            z: portalPos.z - hiderDepth/2
+        })
+        this.bottomHider.setAttribute('rotation',{
+            x: portalRot.x,
+            y: portalRot.y,
+            z: portalRot.z
+        })
+        this.leftHider.setAttribute('width', hiderSize)
+        this.leftHider.setAttribute('height', hiderSize)
+        this.leftHider.setAttribute('depth', hiderDepth)
+        this.leftHider.setAttribute("position", {
+            x: portalPos.x - this.portalSize/2 - hiderSize/2,
+            y: portalPos.y,
+            z: portalPos.z - hiderDepth/2
+        })
+        this.leftHider.setAttribute('rotation',{
+            x: portalRot.x,
+            y: portalRot.y,
+            z: portalRot.z
+        })
+        this.rightHider.setAttribute('width', hiderSize)
+        this.rightHider.setAttribute('height', hiderSize)
+        this.rightHider.setAttribute('depth', hiderDepth)
+        this.rightHider.setAttribute("position", {
+            x: portalPos.x + this.portalSize/2 + hiderSize/2,
+            y: portalPos.y,
+            z: portalPos.z - hiderDepth/2
+        })
+        this.rightHider.setAttribute('rotation',{
+            x: portalRot.x,
+            y: portalRot.y,
+            z: portalRot.z
+        })
+  
 
-        //portal 효과를 위한 stencil buffer 기반 마스킹
+
+   
         
-        // Stencil 기반 portal 구현
-        const setupPortalStencil = () => {
-            // 1. Portal window (stencil mask) - portal 내부만 stencil ref 1로 마킹
-            const portalWindowGeometry = new THREE.PlaneGeometry(this.portalSize, this.portalSize);
-            const portalWindowMaterial = new THREE.MeshBasicMaterial({
-                colorWrite: false,
-                depthWrite: false,
-                stencilWrite: true,
-                stencilFunc: THREE.AlwaysStencilFunc,
-                stencilRef: 1,
-                stencilFail: THREE.KeepStencilOp,
-                stencilZFail: THREE.KeepStencilOp,
-                stencilZPass: THREE.ReplaceStencilOp,
-            });
-            
-            const portalWindow = new THREE.Mesh(portalWindowGeometry, portalWindowMaterial);
-            portalWindow.position.copy(portalPos);
-            portalWindow.position.z += 0.01; // 벽보다 약간 앞에
-            portalWindow.rotation.y = this.portalHelper.rotation.y;
-            portalWindow.renderOrder = -2;
-            this.scene.add(portalWindow);
-            
-            // 2. Occluder planes - portal 외부를 가리는 4개의 plane
-            const createOccluderPlane = (width, height, position, rotation) => {
-                const geometry = new THREE.PlaneGeometry(width, height);
-                const material = new THREE.MeshBasicMaterial({
-                    colorWrite: false,
-                    depthWrite: true,
-                    stencilWrite: true,
-                    stencilFunc: THREE.NotEqualStencilFunc,
-                    stencilRef: 1,
-                    stencilFail: THREE.KeepStencilOp,
-                    stencilZFail: THREE.KeepStencilOp,
-                    stencilZPass: THREE.KeepStencilOp,
-                });
-                
-                const mesh = new THREE.Mesh(geometry, material);
-                mesh.position.copy(position);
-                if (rotation) {
-                    mesh.rotation.x = rotation.x || 0;
-                    mesh.rotation.y = rotation.y || 0;
-                    mesh.rotation.z = rotation.z || 0;
-                }
-                mesh.renderOrder = -1;
-                return mesh;
-            };
-            
-            // Top occluder
-            const topOccluder = createOccluderPlane(
-                this.portalSize + 10, 
-                100,
-                new THREE.Vector3(portalPos.x, portalPos.y + this.portalSize/2 + 50, portalPos.z),
-                { y: this.portalHelper.rotation.y }
-            );
-            this.scene.add(topOccluder);
-            
-            // Bottom occluder
-            const bottomOccluder = createOccluderPlane(
-                this.portalSize + 10, 
-                100,
-                new THREE.Vector3(portalPos.x, portalPos.y - this.portalSize/2 - 50, portalPos.z),
-                { y: this.portalHelper.rotation.y }
-            );
-            this.scene.add(bottomOccluder);
-            
-            // Left occluder
-            const leftOccluder = createOccluderPlane(
-                100, 
-                this.portalSize + 10,
-                new THREE.Vector3(portalPos.x - this.portalSize/2 - 50, portalPos.y, portalPos.z),
-                { y: this.portalHelper.rotation.y }
-            );
-            this.scene.add(leftOccluder);
-            
-            // Right occluder
-            const rightOccluder = createOccluderPlane(
-                100, 
-                this.portalSize + 10,
-                new THREE.Vector3(portalPos.x + this.portalSize/2 + 50, portalPos.y, portalPos.z),
-                { y: this.portalHelper.rotation.y }
-            );
-            this.scene.add(rightOccluder);
-            
-            // Visual debug planes - occluder와 똑같은 크기와 위치
-            const createDebugPlane = (width, height, position, rotation, color) => {
-                const geometry = new THREE.PlaneGeometry(width, height);
-                const material = new THREE.MeshBasicMaterial({
-                    color: color,
-                    transparent: true,
-                    opacity: 0.3,
-                    side: THREE.DoubleSide
-                });
-                
-                const mesh = new THREE.Mesh(geometry, material);
-                mesh.position.copy(position);
-                if (rotation) {
-                    mesh.rotation.x = rotation.x || 0;
-                    mesh.rotation.y = rotation.y || 0;
-                    mesh.rotation.z = rotation.z || 0;
-                }
-                return mesh;
-            };
-            
-            // // Debug planes 생성 (occluder와 동일한 크기/위치)
-            // const topDebug = createDebugPlane(
-            //     this.portalSize + 10, 
-            //     100,
-            //     new THREE.Vector3(portalPos.x, portalPos.y + this.portalSize/2 + 50, portalPos.z),
-            //     { y: this.portalHelper.rotation.y },
-            //     0xff0000 // 빨간색
-            // );
-            // this.scene.add(topDebug);
-            
-            // const bottomDebug = createDebugPlane(
-            //     this.portalSize + 10, 
-            //     100,
-            //     new THREE.Vector3(portalPos.x, portalPos.y - this.portalSize/2 - 50, portalPos.z),
-            //     { y: this.portalHelper.rotation.y },
-            //     0x00ff00 // 초록색
-            // );
-            // this.scene.add(bottomDebug);
-            
-            // const leftDebug = createDebugPlane(
-            //     100, 
-            //     this.portalSize + 10,
-            //     new THREE.Vector3(portalPos.x - this.portalSize/2 - 50, portalPos.y, portalPos.z),
-            //     { y: this.portalHelper.rotation.y },
-            //     0x0000ff // 파란색
-            // );
-            // this.scene.add(leftDebug);
-            
-            // const rightDebug = createDebugPlane(
-            //     100, 
-            //     this.portalSize + 10,
-            //     new THREE.Vector3(portalPos.x + this.portalSize/2 + 50, portalPos.y, portalPos.z),
-            //     { y: this.portalHelper.rotation.y },
-            //     0xffff00 // 노란색
-            // );
-            // this.scene.add(rightDebug);
-            
-            // 3. Content objects (spheres)는 stencil test를 통과하는 material 사용
-            this.portalContentMaterial = new THREE.MeshPhongMaterial({
-                stencilWrite: true,
-                stencilFunc: THREE.EqualStencilFunc,
-                stencilRef: 1,
-                stencilFail: THREE.KeepStencilOp,
-                stencilZFail: THREE.KeepStencilOp,
-                stencilZPass: THREE.KeepStencilOp,
-            });
-            
-            // 3. Content objects (spheres)는 stencil test를 통과하는 material 사용
-            this.portalContentMaterial = new THREE.MeshPhongMaterial({
-                stencilWrite: true,
-                stencilFunc: THREE.EqualStencilFunc,
-                stencilRef: 1,
-                stencilFail: THREE.KeepStencilOp,
-                stencilZFail: THREE.KeepStencilOp,
-                stencilZPass: THREE.KeepStencilOp,
-            });
-        };
-        
-        setupPortalStencil();
+     
         
         // Initialize marching cubes with a slight delay to ensure THREE is loaded
         setTimeout(() => {
@@ -524,30 +436,117 @@ const wallPortalComponent = {
             return;
         }
         
-        // Marching cubes material - 물 같은 효과
-        const marchingCubesMaterial = new THREE.MeshPhongMaterial({
-            color: 0x4488ff,  // 파란색 물
-            transparent: true,
-            opacity: 0.6,  // 약간 투명
-            shininess: 200,  // 높은 광택
-            specular: 0xffffff,  // 흰 반사광
+        // 8thWall 카메라 텍스처를 위한 설정
+        const camTexture_ = new THREE.Texture();
+        const refMat = new THREE.MeshBasicMaterial({
             side: THREE.DoubleSide,
-            depthWrite: true
+            color: 0xffffff,
+            map: camTexture_,
         });
         
+        // Realtime envMap을 위한 CubeRenderTarget
+        const renderTarget = new THREE.WebGLCubeRenderTarget(256, {
+            format: THREE.RGBFormat,
+            generateMipmaps: true,
+            minFilter: THREE.LinearMipmapLinearFilter,
+            encoding: THREE.sRGBEncoding,
+        });
+        
+        // Cubemap scene 생성
+        const cubeMapScene = new THREE.Scene();
+        const cubeCamera = new THREE.CubeCamera(1, 1000, renderTarget);
+        const sphere = new THREE.SphereGeometry(100, 15, 15);
+        const sphereMesh = new THREE.Mesh(sphere, refMat);
+        sphereMesh.scale.set(-1, 1, 1);
+        sphereMesh.rotation.set(Math.PI, -Math.PI / 2, 0);
+        cubeMapScene.add(sphereMesh);
+        
+        this.cubeCamera = cubeCamera;
+        this.cubeMapScene = cubeMapScene;
+        this.camTexture = camTexture_;
+        
+        // Marching cubes material - 실시간 반사 효과
+        const marchingCubesMaterial = new THREE.MeshStandardMaterial({
+            color: 0x88ccff,  // 밝은 파란색
+            metalness: 0.9,  // 높은 금속성으로 반사 강화
+            roughness: 0.1,  // 낮은 거칠기로 매끈한 표면
+            transparent: true,
+            opacity: 0.9,
+            side: THREE.DoubleSide,
+            depthWrite: true,
+            envMap: cubeCamera.renderTarget.texture,  // 실시간 환경맵
+            envMapIntensity: 1.0
+        });
+        
+        // 8thWall cameraPipelineModule 설정
+        const pipelineId = `marchingCubes-${Math.floor(Math.random() * 1000)}`;
+        
+        const onxrloaded = () => {
+            window.XR8.XrController.configure({ enableLighting: true });
+            window.XR8.addCameraPipelineModule({
+                name: pipelineId,
+                onUpdate: () => {
+                    // CubeCamera 업데이트는 tick에서 처리
+                },
+                onProcessCpu: ({ frameStartResult }) => {
+                    const { cameraTexture } = frameStartResult;
+                    // 카메라 텍스처를 강제로 초기화
+                    const texProps = this.sceneEl.renderer.properties.get(camTexture_);
+                    texProps.__webglTexture = cameraTexture;
+                },
+            });
+        };
+        
+        window.XR8 ? onxrloaded() : window.addEventListener("xrloaded", onxrloaded);
+
+
         // Dynamically load MarchingCubes
         import('$lib/components/marchingCubes.js').then((module) => {
             MarchingCubes = module.MarchingCubes;
+
+
+//calculate marchingCubesEffect pos and scale.
+//#1 calculate midpoint betweee portalHelper pos and startHelperLine pos
+const midOfPortalToStartLinePos = new THREE.Vector3(
+    (this.portalHelper.position.x + this.startHelperLine.position.x) / 2,
+    (this.portalHelper.position.y + this.startHelperLine.position.y) / 2,
+    (this.portalHelper.position.z + this.startHelperLine.position.z) / 2
+)
+//#2 calculate distance between PortalHelper pos and startHelperLine pos
+const distance = midOfPortalToStartLinePos.distanceTo(this.portalHelper.position)
+
+//#3 calculate vertical distance from portalHelper pos to startHelperLine
+const shortDistance = this.portalHelper.position.y - this.startHelperLine.position.y
+//#4 calculate minimum height of the marchingCubeEffect
+const minHeight = shortDistance + this.portalSize/2
+const marchingCubeEffectPos = new THREE.Vector3(
+    this.portalHelper.position.x,
+    this.portalHelper.position.y,
+   this.portalHelper.position.z-this.portalSize/2
+)
+
+
+
+
+
+
+
             
             // Create marching cubes effect
-            const resolution = 28; // Lower resolution for better performance
+            const resolution = 128; // Lower resolution for better performance
             this.marchingCubesEffect = new MarchingCubes(resolution, marchingCubesMaterial, false, false, 100000);
             
-            // MarchingCubes 위치와 크기 설정 - sphere가 움직이는 전체 공간 커버
-            const mcSize = this.portalSize * 3; // Portal보다 3배 크게
-            this.marchingCubesEffect.position.set(portalPos.x, portalPos.y, portalPos.z - this.portalSize/2);
-            this.marchingCubesEffect.scale.set(mcSize, mcSize, mcSize);
-            this.marchingCubesEffect.isolation = 80; // 더 높은 isolation 값
+            // MarchingCubes 위치와 크기 설정 - 균일한 scale 사용
+            const mcSize = minHeight; // 균일한 크기
+            // Y 위치를 아래로 조정하여 떨어지는 범위 확대
+          this.marchingCubesEffect.position.set(marchingCubeEffectPos.x,marchingCubeEffectPos.y,marchingCubeEffectPos.z)
+          this.marchingCubesEffect.rotation.y = this.portalHelper.rotation.y
+          this.marchingCubesEffect.scale.set(mcSize, mcSize, mcSize);
+            this.marchingCubesEffect.isolation = 100; // 더 높은 isolation 값
+            
+            // 그림자 설정
+            this.marchingCubesEffect.castShadow = true; // 그림자 생성
+            this.marchingCubesEffect.receiveShadow = false; // 그림자 받지 않음
             
             // Ensure geometry is properly initialized
             if (this.marchingCubesEffect.init) {
@@ -586,12 +585,18 @@ const wallPortalComponent = {
             // Portal center for normalization 
             const portalCenter = this.marchingCubesEffect.position;
             const scale = this.marchingCubesEffect.scale.x;
-            
+            const initialStrength = 0.05
+            const k = 0.02
             // Add metaballs based on sphere positions
             // 각 sphere마다 하나의 metaball 생성 (1:1 매칭)
             const subtract = 12;
-            const strength = 0.25; // 강도 증가로 더 안정적인 metaball
+            let strength = initialStrength + k * Math.log(scale/10 + 1); ; // ball 크기 조정
+         if(strength > 30){
+            strength = 30} else if(strength < 0.1){
+                strength = 0.1
+            }
             
+            console.log(strength,scale)
             for (let i = 0; i < this.sphereEntities.length; i++) {
                 const entity = this.sphereEntities[i];
                 
@@ -599,9 +604,11 @@ const wallPortalComponent = {
                     const spherePos = entity.object3D.position;
                     
                     // Normalize position to marching cubes space (0-1)
-                    const ballx = (spherePos.x - portalCenter.x) / scale + 0.5;
-                    const bally = (spherePos.y - portalCenter.y) / scale + 0.5;
-                    const ballz = (spherePos.z - portalCenter.z) / scale + 0.5;
+                    const ballx = (spherePos.x - portalCenter.x) / scale + 0.5
+                    const bally = (spherePos.y - portalCenter.y) / scale + 0.5
+                    const ballz = (spherePos.z - portalCenter.z) / scale + 0.5
+          
+                    
                     
                     // 범위 확인 및 디버그
                     if (i < 3) { // 첫 3개 sphere 로그
@@ -667,6 +674,20 @@ const wallPortalComponent = {
     } else if(this.wallStep === 2){
         // MarchingCubes가 로드되었는지 확인
         if (this.marchingCubesEffect) {
+            // 8thWall 카메라 텍스처를 사용한 CubeCamera 업데이트
+            if (this.cubeCamera && this.cubeMapScene) {
+                // CubeCamera 위치를 MarchingCubes 중심으로 업데이트
+                this.cubeCamera.position.copy(this.marchingCubesEffect.position);
+                
+                // MarchingCubes를 잠시 숨기고 환경맵 렌더링
+                this.marchingCubesEffect.visible = false;
+                
+                // 8thWall 카메라 텍스처가 적용된 sphere를 사용하여 CubeCamera 업데이트
+                this.cubeCamera.update(this.sceneEl.renderer, this.cubeMapScene);
+                
+                this.marchingCubesEffect.visible = true;
+            }
+            
             // Update marching cubes based on sphere positions
             this.updateMarchingCubes();
         } else {

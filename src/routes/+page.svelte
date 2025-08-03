@@ -48,7 +48,7 @@ async function initAframe8thWall() {
 
     try {
     //   Load scripts in sequence
-      await loadScript("//cdn.8thwall.com/web/aframe/8frame-1.5.0.min.js");
+      await loadScript("//cdn.8thwall.com/web/aframe/8frame-1.3.0.min.js");
       await loadScript(
         "//cdn.8thwall.com/web/aframe/aframe-extras-7.2.0.min.js"
       );
@@ -198,6 +198,26 @@ async function initAframe8thWall() {
         <audio id="collisionSound2" src="/canHit2.mp3"></audio>
       </a-assets>
 
+
+      <a-entity
+      id="main-light"
+      light="
+      type: directional;
+      shadowBias:-0.0001;
+      intensity: 0.8;
+      castShadow: true;
+      shadowMapHeight:2048;
+      shadowMapWidth:2048;
+      shadowCameraTop: 2000;
+      shadowCameraBottom: -500;
+      shadowCameraRight: 300;
+      shadowCameraLeft: -300;
+      target: #ground"
+      xrextras-attach="target: camera; offset: 0 500 15"
+      position="0 3 5"
+    >
+    </a-entity>
+
       <!-- <a-image id="up-arrow" src="#img-arrow" scale="4 4 4"></a-image> -->
 
     <a-entity wall-portal>
@@ -209,7 +229,7 @@ async function initAframe8thWall() {
 
 
         <a-box id="topHider" xrextras-hider-material></a-box>
-        <a-box id="bottomHider" xrextras-hider-material></a-box>
+        <a-box id="bottomHider" xrextras-hider-material  shadow="receive:true; cast:false"></a-box>
         <a-box id="leftHider" xrextras-hider-material></a-box>
         <a-box id="rightHider" xrextras-hider-material></a-box>
 
@@ -252,24 +272,7 @@ async function initAframe8thWall() {
       baseline="bottom"
     ></a-text>
 
-    <a-entity
-      id="main-light"
-      light="
-      type: directional;
-      shadowBias:-0.0001;
-      intensity: 0.8;
-      castShadow: true;
-      shadowMapHeight:2048;
-      shadowMapWidth:2048;
-      shadowCameraTop: 2000;
-      shadowCameraBottom: -500;
-      shadowCameraRight: 300;
-      shadowCameraLeft: -300;
-      target: #ground"
-      xrextras-attach="target: camera; offset: 0 500 15"
-      position="0 3 5"
-    >
-    </a-entity>
+   
 
 
     <!-- 가상 벽 모델 -->
