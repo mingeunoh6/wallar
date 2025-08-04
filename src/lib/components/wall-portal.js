@@ -160,6 +160,7 @@ const wallPortalComponent = {
 
         //가상 벽 없앰
         this.wall.object3D.visible = false;
+        this.startHelperLine.visible = false;
 
 
         this.prompt.innerHTML = `
@@ -503,6 +504,7 @@ const wallPortalComponent = {
         })
   
 
+        this.startLineHe
 
    
         
@@ -555,8 +557,8 @@ const wallPortalComponent = {
                 sphere.setAttribute("ammo-body", {
                     type: "dynamic",
                     mass: 1.0,  // 질량 증가
-                    restitution: 0.3,  // 탄성 감소 (덜 튀김)
-                    linearDamping: 0.5,  // 선형 감쇠 증가 (속도 감소)
+                    restitution: 0.8,  // 탄성 감소 (덜 튀김)
+                    linearDamping: 0.4,  // 선형 감쇠 증가 (속도 감소)
                     angularDamping: 0.8,  // 회전 감쇠 증가
                 });
                 sphere.setAttribute("ammo-shape", {
@@ -670,8 +672,8 @@ const wallPortalComponent = {
         // Marching cubes material - 실시간 반사 효과
         const marchingCubesMaterial = new THREE.MeshStandardMaterial({
             color: 0x000000,  // 밝은 파란색
-            metalness: 0.9,  // 높은 금속성으로 반사 강화
-            roughness: 0.1,  // 낮은 거칠기로 매끈한 표면
+            metalness: 0.5,  // 높은 금속성으로 반사 강화
+            roughness: 0.2,  // 낮은 거칠기로 매끈한 표면
             transparent: true,
             opacity: 1.0,
             side: THREE.DoubleSide,
