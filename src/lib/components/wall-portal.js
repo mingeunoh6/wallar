@@ -296,7 +296,8 @@ const wallPortalComponent = {
 
         let portalBoxMat = {
             color: "black",
-          
+            transparent: true,
+            opacity: 0.0,
             side: THREE.DoubleSide,
             metalness: 0.9,
             roughness: 0.1,
@@ -668,11 +669,11 @@ const wallPortalComponent = {
         
         // Marching cubes material - 실시간 반사 효과
         const marchingCubesMaterial = new THREE.MeshStandardMaterial({
-            color: 0x88ccff,  // 밝은 파란색
+            color: 0x000000,  // 밝은 파란색
             metalness: 0.9,  // 높은 금속성으로 반사 강화
             roughness: 0.1,  // 낮은 거칠기로 매끈한 표면
             transparent: true,
-            opacity: 0.9,
+            opacity: 1.0,
             side: THREE.DoubleSide,
             depthWrite: true,
             envMap: cubeCamera.renderTarget.texture,  // 실시간 환경맵
@@ -740,13 +741,46 @@ this.portalGraphic.scale.set(portalGraphicScaleValue,portalGraphicScaleValue,por
             const resolution = 128; // Lower resolution for better performance
             this.marchingCubesEffect = new MarchingCubes(resolution, marchingCubesMaterial, false, false, 100000);
             
-            // MarchingCubes 위치와 크기 설정 - 균일한 scale 사용
-            const mcSize = minHeight; // 균일한 크기
-            // Y 위치를 아래로 조정하여 떨어지는 범위 확대
-          this.marchingCubesEffect.position.set(marchingCubeEffectPos.x,marchingCubeEffectPos.y,marchingCubeEffectPos.z)
+            // MarchingCubes 위치와 크기 설정
+            // Ground의 실제 위치 확인 (Y = -1)
+            const groundY = this.ground.object3D.position.y; // -1
+            const portalY = marchingCubeEffectPos.y;
+            
+            // 포털에서 바닥까지의 실제 거리
+            const distanceToGround = portalY - groundY;
+            
+            // MarchingCubes position을 portal position과 일치시키기
+            // 실제 필요한 크기 (portal에서 ground까지의 거리)
+            const requiredSize = distanceToGround * 2; // 위아래 여유 공간 포함
+            
+            // MarchingCubes 기본 크기는 2.0 (-1 ~ +1)
+            // 우리가 원하는 크기로 스케일링
+            const mcScale = requiredSize / 2.0; // 기본 크기 2.0를 requiredSize로 확장
+            
+            // 크기 정보 저장
+            this.mcScale = mcScale;
+            this.requiredSize = requiredSize;
+            this.distanceToGround = distanceToGround;
+            
+          this.marchingCubesEffect.position.set(
+              marchingCubeEffectPos.x,
+              marchingCubeEffectPos.y, // portal Y 위치와 일치
+              marchingCubeEffectPos.z
+          )
           this.marchingCubesEffect.rotation.y = this.portalHelper.rotation.y
-          this.marchingCubesEffect.scale.set(mcSize, mcSize, mcSize);
-            this.marchingCubesEffect.isolation = 100; // 더 높은 isolation 값
+          
+          // 필요한 크기로 스케일링
+          this.marchingCubesEffect.scale.set(mcScale, mcScale, mcScale);
+          
+          console.log('MarchingCubes setup:', {
+              groundY,
+              portalY,
+              portalPosition: marchingCubeEffectPos,
+              mcScale,
+              requiredSize,
+              distanceToGround
+          });
+            this.marchingCubesEffect.isolation = 50; // 낮은 isolation 값으로 더 쉽게 표면 형성
             
             // 그림자 설정
             this.marchingCubesEffect.castShadow = true; // 그림자 생성
@@ -761,7 +795,9 @@ this.portalGraphic.scale.set(portalGraphicScaleValue,portalGraphicScaleValue,por
             console.log('MarchingCubes loaded successfully:', {
                 position: this.marchingCubesEffect.position,
                 scale: this.marchingCubesEffect.scale,
-                isolation: this.marchingCubesEffect.isolation
+                isolation: this.marchingCubesEffect.isolation,
+                portalHelperPos: this.portalHelper.position,
+                groundPos: this.ground.object3D.position
             });
         }).catch((error) => {
             console.error('Failed to load MarchingCubes:', error);
@@ -788,48 +824,90 @@ this.portalGraphic.scale.set(portalGraphicScaleValue,portalGraphicScaleValue,por
             
             // Portal center for normalization 
             const portalCenter = this.marchingCubesEffect.position;
-            const scale = this.marchingCubesEffect.scale.x;
-            const initialStrength = 0.05
-            const k = 0.02
-            // Add metaballs based on sphere positions
-            // 각 sphere마다 하나의 metaball 생성 (1:1 매칭)
-            const subtract = 12;
-            let strength = initialStrength + k * Math.log(scale/10 + 1); ; // ball 크기 조정
-         if(strength > 30){
-            strength = 30} else if(strength < 0.1){
-                strength = 0.1
-            }
+            const scale = this.mcScale || this.marchingCubesEffect.scale.x;
             
-            console.log(strength,scale)
+            // MarchingCubes는 기본 크기 2.0 (-1~+1)에서 작동
+            // scale로 확장된 실제 크기: scale * 2.0
+            const actualMCSize = scale * 2.0;
+            
+            // Metaball 파라미터 조정
+            const sphereRadius = 0.1; // sphere의 실제 반지름
+            const subtract = 12;
+            
+            // strength를 실제 크기에 맞춰 조정
+            const normalizedRadius = sphereRadius / actualMCSize;
+            let strength = normalizedRadius * 10; // 더 큰 값으로 설정
+            
+            // 최소/최대값 제한
+            strength = Math.max(0.05, Math.min(strength, 1.0));
+            
+            console.log(`Strength: ${strength.toFixed(3)}, Scale: ${scale.toFixed(2)}, Actual MC Size: ${actualMCSize.toFixed(2)}`);
+            
             for (let i = 0; i < this.sphereEntities.length; i++) {
                 const entity = this.sphereEntities[i];
                 
-                if (entity.object3D) {
-                    const spherePos = entity.object3D.position;
-                    
-                    // Normalize position to marching cubes space (0-1)
-                    const ballx = (spherePos.x - portalCenter.x) / scale + 0.5
-                    const bally = (spherePos.y - portalCenter.y) / scale + 0.5
-                    const ballz = (spherePos.z - portalCenter.z) / scale + 0.5
-          
-                    
-                    
-                    // 범위 확인 및 디버그
-                    if (i < 3) { // 첫 3개 sphere 로그
-                        console.log(`Sphere ${i}: world(${spherePos.x.toFixed(2)}, ${spherePos.y.toFixed(2)}, ${spherePos.z.toFixed(2)}) -> mc(${ballx.toFixed(2)}, ${bally.toFixed(2)}, ${ballz.toFixed(2)})`);
-                        
-                        // MarchingCubes 범위 밖으로 나가는지 확인
-                        if (ballx < 0 || ballx > 1 || bally < 0 || bally > 1 || ballz < 0 || ballz > 1) {
-                            console.warn(`Sphere ${i} is outside marching cubes bounds!`);
-                        }
-                    }
-                    
-                    // 모든 sphere에 대해 metaball 추가
-                    this.marchingCubesEffect.addBall(ballx, bally, ballz, strength, subtract);
+                // Physics body가 있으면 physics position 사용, 없으면 object3D position 사용
+                let spherePos;
+                if (entity.body && entity.body.getPosition) {
+                    // Ammo.js physics body position 가져오기
+                    const bodyPos = entity.body.getPosition();
+                    spherePos = new THREE.Vector3(bodyPos.x(), bodyPos.y(), bodyPos.z());
+                } else if (entity.object3D) {
+                    // fallback to object3D position
+                    spherePos = entity.object3D.position;
+                } else {
+                    continue; // Skip if no position available
                 }
+                
+                // Normalize position to marching cubes space (0-1)
+                // MarchingCubes는 -scale ~ +scale 범위를 커버 (총 크기 = 2*scale)
+                const ballx = (spherePos.x - portalCenter.x) / (2 * scale) + 0.5;
+                const bally = (spherePos.y - portalCenter.y) / (2 * scale) + 0.5;
+                const ballz = (spherePos.z - portalCenter.z) / (2 * scale) + 0.5;
+      
+                
+                
+                // 범위 확인 및 디버그
+                if (i < 3) { // 첫 3개 sphere 로그
+                    const hasPhysics = entity.body && entity.body.getPosition;
+                    const groundY = this.ground.object3D.position.y; // -1
+                    const distanceFromGround = spherePos.y - groundY;
+                    
+                    // 실제 월드 좌표에서 ball이 나타날 위치 역계산
+                    const ballWorldX = (ballx - 0.5) * (2 * scale) + portalCenter.x;
+                    const ballWorldY = (bally - 0.5) * (2 * scale) + portalCenter.y;
+                    const ballWorldZ = (ballz - 0.5) * (2 * scale) + portalCenter.z;
+                    
+                    console.log(`Sphere ${i}:`);
+                    console.log(`  Sphere world pos: (${spherePos.x.toFixed(2)}, ${spherePos.y.toFixed(2)}, ${spherePos.z.toFixed(2)})`);
+                    console.log(`  Ball world pos:   (${ballWorldX.toFixed(2)}, ${ballWorldY.toFixed(2)}, ${ballWorldZ.toFixed(2)})`);
+                    console.log(`  Difference:       (${(spherePos.x - ballWorldX).toFixed(2)}, ${(spherePos.y - ballWorldY).toFixed(2)}, ${(spherePos.z - ballWorldZ).toFixed(2)})`);
+                    console.log(`  MC normalized:    (${ballx.toFixed(3)}, ${bally.toFixed(3)}, ${ballz.toFixed(3)})`);
+                    console.log(`  MC center:        (${portalCenter.x.toFixed(2)}, ${portalCenter.y.toFixed(2)}, ${portalCenter.z.toFixed(2)})`);
+                    console.log(`  MC scale:         ${scale.toFixed(2)}`);
+                    console.log(`  MC total size:    ${(2 * scale).toFixed(2)}`);
+                    
+                    // MarchingCubes 범위 밖으로 나가는지 확인
+                    if (ballx < 0 || ballx > 1 || bally < 0 || bally > 1 || ballz < 0 || ballz > 1) {
+                        console.warn(`  WARNING: Ball is outside MC bounds!`);
+                    }
+                }
+                
+                // 모든 sphere에 대해 metaball 추가
+                this.marchingCubesEffect.addBall(ballx, bally, ballz, strength, subtract);
             }
             
             this.marchingCubesEffect.update();
+            
+            // MarchingCubes 상태 확인 (루프 밖에서)
+            console.log('MarchingCubes update complete:', {
+                visible: this.marchingCubesEffect.visible,
+                ballCount: this.sphereEntities.length,
+                hasGeometry: !!this.marchingCubesEffect.geometry,
+                vertexCount: this.marchingCubesEffect.geometry?.attributes?.position?.count || 0,
+                material: this.marchingCubesEffect.material.type,
+                opacity: this.marchingCubesEffect.material.opacity
+            });
         } catch (error) {
             console.error('Error updating marching cubes:', error);
         }
